@@ -1,0 +1,77 @@
+import random
+
+crops = {
+    "Wheat": [200, 3],
+    "Rice": [180, 4],
+    "Maize": [150, 2]
+}
+
+total_land = 50
+max_water = 150
+
+def fitness(solution):
+    total_profit = 0
+    total_water = 0
+    total_used_land = sum(solution)
+    if total_used_land > total_land:
+        return -99999
+    for i, crop in enumerate(crops):
+        units = solution[i]
+        profit, water = crops[crop]
+        total_profit += profit * units
+        total_water += water * units
+    if total_water > max_water:
+        return -99999
+    return total_profit
+
+def init_population(size):
+    population = []
+    for _ in range(size):
+        solution = [random.randint(0, total_land) for _ in crops] 
+        population.append(solution)
+    return population
+
+def selection(population):
+    i, j = random.sample(range(len(population)), 2)
+    if fitness(population[i]) > fitness(population[j]):
+        return population[i]
+    else:
+        return population[j]
+
+def crossover(parent1, parent2):
+    point = random.randint(1, len(parent1)-1)
+    child1 = parent1[:point] + parent2[point:]
+    child2 = parent2[:point] + parent1[point:]
+    return child1, child2
+
+def mutate(solution, rate=0.1):
+    for i in range(len(solution)):
+        if random.random() < rate:
+            solution[i] = random.randint(0, total_land)
+    return solution
+
+def genetic_algorithm(pop_size=20, generations=50):
+    population = init_population(pop_size)
+    best_solution = None
+    best_score = float("-inf")
+    for gen in range(generations):
+        new_population = []
+        for _ in range(pop_size // 2):
+            parent1 = selection(population)
+            parent2 = selection(population)
+            child1, child2 = crossover(parent1, parent2)
+            child1 = mutate(child1)
+            child2 = mutate(child2)
+            new_population.extend([child1, child2])
+        population = new_population
+        for sol in population:
+            score = fitness(sol)
+            if score > best_score:
+                best_score = score
+                best_solution = sol
+        print(f"Generation {gen+1}: Best Profit = {best_score}")
+    return best_solution, best_score
+
+best_sol, best_profit = genetic_algorithm()
+print("\nBest Allocation (Wheat, Rice, Maize):", best_sol)
+print("Maximum Profit:", best_profit)
