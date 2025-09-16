@@ -1,0 +1,63 @@
+import random
+
+graph = [
+    [0, 2, 0, 1, 0],
+    [2, 0, 3, 2, 0],
+    [0, 3, 0, 0, 1],
+    [1, 2, 0, 0, 3],
+    [0, 0, 1, 3, 0],
+]
+
+pheromone = [[1]*len(graph) for _ in range(len(graph))]
+alpha, beta = 1, 2
+evaporation = 0.5
+ants, iterations = 5, 10
+source, dest = 0, 4
+
+def choose_next(current, visited):
+    probs = []
+    total = 0
+    for nxt in range(len(graph)):
+        if graph[current][nxt] and nxt not in visited:
+            val = (pheromone[current][nxt]**alpha) * ((1/graph[current][nxt])**beta)
+            probs.append((nxt, val))
+            total += val
+    if total == 0: return None
+    r = random.uniform(0, total)
+    s = 0
+    for nxt, val in probs:
+        s += val
+        if s >= r:
+            return nxt
+
+def ant_walk():
+    path = [source]
+    while path[-1] != dest:
+        nxt = choose_next(path[-1], path)
+        if nxt is None:
+            return None, float('inf')
+        path.append(nxt)
+    cost = sum(graph[path[i]][path[i+1]] for i in range(len(path)-1))
+    return path, cost
+
+best_path, best_cost = None, float('inf')
+
+for iteration in range(iterations):
+    paths = []
+    for _ in range(ants):
+        p, c = ant_walk()
+        if p:
+            paths.append((p, c))
+            if c < best_cost:
+                best_path, best_cost = p, c
+    for i in range(len(graph)):
+        for j in range(len(graph)):
+            pheromone[i][j] *= (1 - evaporation)
+    for p, c in paths:
+        for i in range(len(p)-1):
+            pheromone[p[i]][p[i+1]] += 1 / c
+
+    print(f"Iteration {iteration+1}: Best cost so far = {best_cost}")    
+
+print("Best path:", best_path)
+print("Best cost:", best_cost)
