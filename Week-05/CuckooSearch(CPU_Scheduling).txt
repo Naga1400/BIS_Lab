@@ -1,0 +1,62 @@
+import random
+import numpy as np
+
+processes = ["P1", "P2", "P3", "P4"]
+burst_times = {"P1": 6, "P2": 8, "P3": 7, "P4": 3}
+
+num_nests = 6
+max_iter = 50
+pa = 0.25
+
+def fitness(schedule):
+    waiting_time = 0
+    total_waiting_time = 0
+    for i in range(len(schedule)):
+        proc = schedule[i]
+        total_waiting_time += waiting_time
+        waiting_time += burst_times[proc]
+    avg_waiting = total_waiting_time / len(schedule)
+    return avg_waiting
+
+def generate_population():
+    nests = []
+    for _ in range(num_nests):
+        schedule = processes.copy()
+        random.shuffle(schedule)
+        nests.append(schedule)
+    return nests
+
+def levy_flight(schedule):
+    new_schedule = schedule.copy()
+    i, j = random.sample(range(len(schedule)), 2)
+    new_schedule[i], new_schedule[j] = new_schedule[j], new_schedule[i]
+    return new_schedule
+
+def cuckoo_search():
+    nests = generate_population()
+    best_schedule = min(nests, key=fitness)
+
+    for _ in range(max_iter):
+        cuckoo = levy_flight(best_schedule)
+        cuckoo_fit = fitness(cuckoo)
+
+        j = random.randint(0, num_nests - 1)
+        if cuckoo_fit < fitness(nests[j]):
+            nests[j] = cuckoo
+
+        num_abandon = int(pa * num_nests)
+        nests = sorted(nests, key=fitness)
+        for k in range(num_abandon):
+            new_schedule = processes.copy()
+            random.shuffle(new_schedule)
+            nests[-(k+1)] = new_schedule
+
+        current_best = min(nests, key=fitness)
+        if fitness(current_best) < fitness(best_schedule):
+            best_schedule = current_best
+
+    return best_schedule, fitness(best_schedule)
+
+best_order, best_fit = cuckoo_search()
+print("Best Scheduling Order:", best_order)
+print("Average Waiting Time:", best_fit)
