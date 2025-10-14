@@ -1,0 +1,69 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+start = np.array([0, 0])
+goal = np.array([10, 10])
+obstacles = [(4, 4, 1.5), (6, 6, 1.5), (7, 3, 1.2)]
+num_wolves = 20
+max_iter = 50
+dim = 2
+
+def fitness_function(position):
+    path_length = np.linalg.norm(start - position) + np.linalg.norm(goal - position)
+    penalty = 0
+    for (ox, oy, r) in obstacles:
+        d = np.linalg.norm(position - np.array([ox, oy]))
+        if d < r + 0.5:
+            penalty += 1000
+    return path_length + penalty
+
+wolves = np.random.uniform(low=0, high=10, size=(num_wolves, dim))
+fitness = np.array([fitness_function(w) for w in wolves])
+
+def update_hierarchy(wolves, fitness):
+    sorted_idx = np.argsort(fitness)
+    alpha = wolves[sorted_idx[0]]
+    beta  = wolves[sorted_idx[1]]
+    delta = wolves[sorted_idx[2]]
+    return alpha, beta, delta
+
+alpha, beta, delta = update_hierarchy(wolves, fitness)
+a = 2
+
+for iteration in range(max_iter):
+    for i in range(num_wolves):
+        for j in range(dim):
+            r1, r2 = np.random.rand(), np.random.rand()
+            A1, C1 = 2 * a * r1 - a, 2 * r2
+            D_alpha = abs(C1 * alpha[j] - wolves[i][j])
+            X1 = alpha[j] - A1 * D_alpha
+            r1, r2 = np.random.rand(), np.random.rand()
+            A2, C2 = 2 * a * r1 - a, 2 * r2
+            D_beta = abs(C2 * beta[j] - wolves[i][j])
+            X2 = beta[j] - A2 * D_beta
+            r1, r2 = np.random.rand(), np.random.rand()
+            A3, C3 = 2 * a * r1 - a, 2 * r2
+            D_delta = abs(C3 * delta[j] - wolves[i][j])
+            X3 = delta[j] - A3 * D_delta
+            wolves[i][j] = (X1 + X2 + X3) / 3
+        wolves[i] = np.clip(wolves[i], 0, 10)
+    fitness = np.array([fitness_function(w) for w in wolves])
+    alpha, beta, delta = update_hierarchy(wolves, fitness)
+    a = 2 - iteration * (2 / max_iter)
+    print(f"Iteration {iteration+1}: Best Fitness = {fitness_function(alpha):.4f}")
+
+best_path = np.array([start, alpha, goal])
+plt.figure(figsize=(7,7))
+plt.title("Robot Path Planning using Grey Wolf Optimization")
+plt.xlabel("X-axis")
+plt.ylabel("Y-axis")
+for (ox, oy, r) in obstacles:
+    plt.gca().add_patch(plt.Circle((ox, oy), r, color='red', alpha=0.4))
+plt.plot(best_path[:,0], best_path[:,1], 'b--o', label="Optimal Path")
+plt.scatter(start[0], start[1], color='green', s=80, label='Start')
+plt.scatter(goal[0], goal[1], color='purple', s=80, label='Goal')
+plt.xlim(0, 10)
+plt.ylim(0, 10)
+plt.legend()
+plt.grid(True)
+plt.show()
